@@ -15,133 +15,116 @@ class SelectMenu extends MovieClip {
 	var option1:MovieClip;
 	var option2:MovieClip;
 
-	var options:Array = new Array(3);
+	var _options:Array = new Array(3);
+	var _optionFillIdx: Number = 0;
 
-	var CurrentSelection:MovieClip;
-	var CurrentSelectionIdx:Number;
+	var _selectedIdx:Number;
 
 	public function SelectMenu() {
 		super();
-		FocusHandler.instance.setFocus(this,0);
+		FocusHandler.instance.setFocus(this, 0);
 		bg = _root.bg;
-		options = [option0, option1, option2];
+		_options = [option0, option1, option2];
+		_optionFillIdx = 0;
 	}
 
 	private function onLoad() {
-		// Handle resizing the bg element for ultrawidescreen
-		var stageObj = new Object();
-		Stage.addListener(stageObj);
-		stageObj.onResize = function() {
-			_root.bg._width = Stage.width;
-			_root.bg._height = Stage.height;
-		};
-		stageObj.onResize();
-		Stage.addListener(stageObj);
+		_global.gfxExtensions = true;
 
-		TweenLite.from(_root,0.6,{_alpha:0});
+		bg._x = 0;
+		bg._y = 0;
+		bg._width = Stage.visibleRect.width;
+		bg._height = Stage.visibleRect.height;
+
+		this._x = Stage.visibleRect.width / 2;
+		this._y = Stage.visibleRect.height / 2;
+
+		TweenLite.from(_root, 0.6, {_alpha:0});
 	}
 
-	public function SetData(optionid:Number, n:String, lv:String, sx:String, loc:String, t:String, r:String, w:Boolean) {
-		options[optionid].SetData(n,lv,sx,loc,t,r,w);
-	}
-
-	public function OpenMenu():Void {
-		var len:Number = options.length;
-		for (var i:Number = 0; i < len; i++) {
-			if (options[i].IsDisabled()) {
-				options[i].DisableOption();
-			}
-		}
-
-		if (isalldisabled()) {
+	public function SetData(id: String, name:String, lv:String, sex:String, loc:String, time:String, wanted:String) {
+		if (_optionFillIdx >= _options.length) {
+			skse.Log("Cannot set data for more than " + _options.length + " options");
 			return;
 		}
-		CurrentSelectionIdx = 0;
-		while (options[CurrentSelectionIdx].IsDisabled()) {
-			CurrentSelectionIdx++;
-		}
-		SetCurrentSelection(options[CurrentSelectionIdx]);
+		_options[_optionFillIdx++].SetData(id, name, lv, sex, loc, time, wanted == "1");
 	}
 
-	public function SetCurrentSelection(next:MovieClip) {
-		CurrentSelection.ClearHighlight();// Clear old highlight tween.
-		CurrentSelection = next;
-		for (var x = 0; x < options.length; x++) {
-			if (options[x] == CurrentSelection) {// Find index for current selection.
-				CurrentSelectionIdx = x;
+	/* GFX */
+
+	public function handleInput(details:InputDetails, pathToFocus:Array):Boolean {
+		if (!GlobalFunc.IsKeyPressed(details))
+			return false;
+
+		switch (details.navEquivalent) {
+		case NavigationCode.TAB:
+			CloseMenu();
+			break;
+		case NavigationCode.ENTER:
+			if (!_options[_selectedIdx].IsDisabled()) {
+				AcceptSelection()
 			}
+			break;
+		case NavigationCode.UP:
+			{
+				var newidx = _selectedIdx - 1;
+				if (newidx < 0)	
+					newidx = _options.length - 1;
+
+				updateSelection(newidx)
+			}
+			break;
+		case NavigationCode.DOWN:
+			{
+				var newidx = _selectedIdx + 1;
+				if (newidx >= _options.length - 1)	
+					newidx = 0;
+
+				updateSelection(newidx)
+			}
+			break;
+		case NavigationCode.PAGE_DOWN:
+			updateSelection(_options.length - 1);
+			break;
+		case NavigationCode.PAGE_UP:
+			updateSelection(0);
+			break;
+		default:
+			return false;
 		}
-		CurrentSelection.HandleHighlight();// Start new highlight tween.
+		return true;
 	}
 
-	public function DoAccept() {
-		// Event sending the chosen Victims name and FormID
-		skse.SendModEvent("YKCaptures_Accept",CurrentSelection.name,CurrentSelectionIdx);
-		CurrentSelection.HandleSelection();
-		trace(CurrentSelectionIdx);
-		DoExit();
+	/* PRIVATE */
+
+	private function AcceptSelection() {
+		skse.SendModEvent("AchMarket_SELECT", _options[_selectedIdx].option_id);
+
+		_options[_selectedIdx].HandleSelection();
+		CloseMenu();
 	}
 
-	public function DoCancel() {
-		skse.SendModEvent("YKCaptures_Cancel");// Send ModEvent called "YamMenu_Cancel" to indicate the menu has been closed.
-		DoExit();
+	private function updateSelection(newIdx) {
+		_options[_selectedIdx].ClearHighlight();
+		_options[newIdx].HandleHighlight();
+		_selectedIdx = newIdx;
 	}
 
-	private function DoExit() {
-		TweenLite.to(this,0.4,{_alpha:0, onComplete:_root.main.DoClose});// When this tween completes, call DoClose();
-		TweenLite.to(bg,0.4,{_alpha:0});
+	private function CloseMenu() {
+		TweenLite.to(this, 0.4, { _alpha:0, onComplete:_root.main.CloseMenuImpl});
+		TweenLite.to(bg, 0.4, { _alpha:0 });
 	}
-	private function DoClose() {
-		trace("exiting");
+	public function CloseMenuImpl() {
 		skse.CloseMenu("CustomMenu");
 	}
 
-	public function handleInput(details:InputDetails, pathToFocus:Array):Void {
-		//_root.test1.text = "value=" + details.value+ "navEquivalent=" + details.navEquivalent;
-		if (GlobalFunc.IsKeyPressed(details)) {
-			var last = options.length - 1;
-			if (details.navEquivalent == NavigationCode.TAB) {
-				DoCancel();
-			} else if (details.navEquivalent == NavigationCode.ENTER && !CurrentSelection.IsDisabled()) {
-				DoAccept();
-			} else if (isalldisabled()) {
-				return;
-			} else if (details.navEquivalent == NavigationCode.UP) {
-				CurrentSelectionIdx--;
-				while (true) {
-					if (CurrentSelectionIdx < 0) {
-						CurrentSelectionIdx = last;
-					}
-					if (!options[CurrentSelectionIdx].IsDisabled()) {
-						if (options[CurrentSelectionIdx] != CurrentSelection)
-							SetCurrentSelection(options[CurrentSelectionIdx]);
-						break;
-					}
-					CurrentSelectionIdx--;
-				}
-			} else if (details.navEquivalent == NavigationCode.DOWN) {
-				CurrentSelectionIdx++;
-				while (true) {
-					if (CurrentSelectionIdx == options.length) {
-						CurrentSelectionIdx = 0;
-					}
-					if (!options[CurrentSelectionIdx].IsDisabled()) {
-						if (options[CurrentSelectionIdx] != CurrentSelection)
-							SetCurrentSelection(options[CurrentSelectionIdx]);
-						break;
-					}
-					CurrentSelectionIdx++;
-				}
-			}
-		}
-	}
-
-	private function isalldisabled():Boolean {
-		for (var i:Number = 0; i < options.length; i++) {
-			if (!options[i].IsDisabled()) {
+	private function isAllOptionsDisabled():Boolean {
+		for (var i:Number = 0; i < _options.length; i++) {
+			if (!_options[i].IsDisabled()) {
 				return false;
 			}
 		}
 		return true;
 	}
+
 }
