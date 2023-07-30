@@ -55,9 +55,6 @@ class SelectInfo extends MovieClip
 		location.text = "";
 		time.text = "";
 		wanted.text = "";
-
-		clearHighlight();
-		_alpha = 25;
 	}
 
 	public function SetData(id: String, arg_name: String, lv: String, arg_sex: String, arg_loc: String, arg_time: String, arg_wanted: Boolean)
@@ -66,28 +63,25 @@ class SelectInfo extends MovieClip
 		empty.text = "";
 
 		name.text = arg_name;
-		level.text = lv;
-		sex.text = arg_sex
+		level.text = "Lv. " + lv;
+		sex.text = arg_sex == "0" ? "Male" : "Female"
 		location.text = arg_loc;
 		time.text = arg_time;
 		wanted.text = arg_wanted ? "WANTED" : "";
-
-		_alpha = 70;
 	}
 
-	public function HandleHighlight(): Void
-	{
-		this._alpha = 100;
-		foreground._width = baseW;
-		foreground._height = baseH
+	public function highlight() {
+		_alpha = isDisabled ? 25 : 90;
 
-		TweenLite.to(foreground, 0.5, {_width:baseW+2, _height:baseH+2});
+		_width = baseW;
+		_height = baseH;
+		TweenLite.to(this, 0.2, {_width:baseW + 2, _height:baseH + 2});
 	}
-	
-	public function clearHighlight(): Void
-	{
-		this._alpha = 80;
-		TweenLite.to(foreground, 0.2, {_width:baseW, _height:baseH});
+
+	public function clearHighlight() {
+		_alpha = isDisabled ? 15 : 45;
+
+		TweenLite.to(this, 0.2, {_width:baseW, _height:baseH});
 	}
 	
 	public function HandleSelection(): Void
@@ -99,10 +93,7 @@ class SelectInfo extends MovieClip
 
 	public function onRollOver(): Void
 	{
-		if (isDisabled)
-			return;
-
-		_parent.SetCurrentSelection(this);
+		_parent.updateSelectionObj(this);
 	}
 
 	public function onMouseDown(): Void
@@ -111,7 +102,7 @@ class SelectInfo extends MovieClip
 			return;
 
 		if (Mouse.getTopMostEntity()._parent == this) {
-			_root.main.DoAccept();
+			_root.main.AcceptSelection();
 		}
 	}
 

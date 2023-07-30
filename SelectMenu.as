@@ -48,6 +48,9 @@ class SelectMenu extends MovieClip {
 			return;
 		}
 		_options[_optionFillIdx++].SetData(id, name, lv, sex, loc, time, wanted == "1");
+		if (_optionFillIdx == 1) {
+			updateSelection(0);
+		}
 	}
 
 	/* GFX */
@@ -58,7 +61,7 @@ class SelectMenu extends MovieClip {
 
 		switch (details.navEquivalent) {
 		case NavigationCode.TAB:
-			CloseMenu();
+			CancelSelection();
 			break;
 		case NavigationCode.ENTER:
 			if (!_options[_selectedIdx].IsDisabled()) {
@@ -77,7 +80,7 @@ class SelectMenu extends MovieClip {
 		case NavigationCode.DOWN:
 			{
 				var newidx = _selectedIdx + 1;
-				if (newidx >= _options.length - 1)	
+				if (newidx > _options.length - 1)	
 					newidx = 0;
 
 				updateSelection(newidx)
@@ -103,10 +106,26 @@ class SelectMenu extends MovieClip {
 		_options[_selectedIdx].HandleSelection();
 		CloseMenu();
 	}
+	private function CancelSelection() {
+		skse.SendModEvent("AchMarket_CANCEL");
+		CloseMenu()
+	}
 
+	private function updateSelectionObj(newSelect) {
+		for (var i = 0; i < _options.length; i++) {
+			if (newSelect == _options[i]) {
+				updateSelection(i);
+				return;
+			}
+		}
+		skse.Log("Invalid update request");
+	}
 	private function updateSelection(newIdx) {
-		_options[_selectedIdx].ClearHighlight();
-		_options[newIdx].HandleHighlight();
+		if (newIdx == _selectedIdx)
+			return;
+
+		_options[_selectedIdx].clearHighlight();
+		_options[newIdx].highlight();
 		_selectedIdx = newIdx;
 	}
 
