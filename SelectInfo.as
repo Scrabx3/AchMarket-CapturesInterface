@@ -59,7 +59,7 @@ class SelectInfo extends MovieClip
 
 	public function SetData(id: String, arg_name: String, lv: String, arg_sex: String, arg_loc: String, arg_time: String, arg_wanted: Boolean)
 	{
-		id = option_id;
+		option_id = id;
 		empty.text = "";
 
 		name.text = arg_name;
